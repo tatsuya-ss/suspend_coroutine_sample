@@ -8,8 +8,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.suspend_coroutine_sample.databinding.ActivityMainBinding
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,38 +36,30 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-class MainViewModel(): ViewModel() {
+class MainViewModel: ViewModel() {
 
     private val _result: MutableLiveData<String> = MutableLiveData()
     val result: LiveData<String> = _result
 
     fun onCreate() {
         viewModelScope.launch {
-            Query().execute(object : Query.Callback {
-                override fun success(result: String) {
-                    _result.value = result
-                }
-
-                override fun failure(e: Exception) {
-                    _result.value = e.message
-                }
-            })
+            try {
+                val result = Query().executeWithSuspendCoroutine()
+                _result.value = result
+            } catch (e: Exception) {
+                _result.value = e.message
+            }
         }
     }
 }
 
 class Query {
-    interface Callback {
-        fun success(result: String)
-        fun failure(e: Exception)
-    }
-
-    suspend fun execute(callback: Callback) {
+    suspend fun executeWithSuspendCoroutine() = suspendCoroutine<String> { continuation ->
         try {
-            delay(1000L)
-            callback.success("成功")
+            // 非同期の処理...
+            continuation.resume("成功")
         } catch (e: Exception) {
-            callback.failure(Exception("失敗"))
+            continuation.resumeWithException(e)
         }
     }
 }
